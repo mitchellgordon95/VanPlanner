@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Van Route Planner</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Van Route Planner</h1>
+        
+        <section id="van-section">
+            <h2>Vans</h2>
+            <div id="van-list"></div>
+            <button onclick="addVan()">Add Van</button>
+        </section>
+
+        <section id="location-section">
+            <h2>Destinations</h2>
+            <div id="location-list"></div>
+            <button onclick="addLocation()">Add Location</button>
+        </section>
+
+        <button id="calculate" onclick="calculateRoutes()" disabled>Calculate Routes</button>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
