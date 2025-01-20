@@ -116,6 +116,96 @@ function updateCalculateButton() {
 }
 
 function calculateRoutes() {
-    // This will be implemented next
-    console.log('Calculating routes for:', {vans, locations});
+    // Reset any previous results
+    const results = [];
+    let unassignedLocations = [...locations];
+    
+    // For each van, create a route
+    for (const van of vans) {
+        if (unassignedLocations.length === 0) break;
+        
+        const route = {
+            vanNumber: van.vanNumber,
+            seatCount: van.seatCount,
+            locations: [],
+            totalPassengers: 0,
+            estimatedMinutes: 0
+        };
+
+        // Keep adding locations until we can't fit more passengers
+        while (unassignedLocations.length > 0) {
+            // Find the location that would add the least time to current route
+            let bestLocation = null;
+            let bestIndex = 0;
+            let bestAddedTime = Infinity;
+
+            for (const location of unassignedLocations) {
+                // Skip if adding these passengers would exceed van capacity
+                if (route.totalPassengers + location.passengerCount > van.seatCount) {
+                    continue;
+                }
+
+                // Try inserting this location at each possible position
+                for (let i = 0; i <= route.locations.length; i++) {
+                    const testRoute = [...route.locations];
+                    testRoute.splice(i, 0, location);
+                    const newTime = getRouteTime(testRoute);
+                    const addedTime = newTime - route.estimatedMinutes;
+
+                    if (addedTime < bestAddedTime) {
+                        bestAddedTime = addedTime;
+                        bestLocation = location;
+                        bestIndex = i;
+                    }
+                }
+            }
+
+            // If we couldn't find a location to add, this van is done
+            if (!bestLocation) break;
+
+            // Add the best location found to the route
+            route.locations.splice(bestIndex, 0, bestLocation);
+            route.totalPassengers += bestLocation.passengerCount;
+            route.estimatedMinutes = getRouteTime(route.locations);
+            
+            // Remove this location from unassigned list
+            unassignedLocations = unassignedLocations.filter(l => l.id !== bestLocation.id);
+        }
+
+        if (route.locations.length > 0) {
+            results.push(route);
+        }
+    }
+
+    // Check for unassigned locations
+    if (unassignedLocations.length > 0) {
+        alert('Warning: Not all locations could be assigned to routes. Need more vans or seats.');
+    }
+
+    displayRoutes(results);
+}
+
+function displayRoutes(routes) {
+    // Create a results section if it doesn't exist
+    let resultsSection = document.getElementById('results-section');
+    if (!resultsSection) {
+        resultsSection = document.createElement('section');
+        resultsSection.id = 'results-section';
+        document.querySelector('.container').appendChild(resultsSection);
+    }
+
+    resultsSection.innerHTML = `
+        <h2>Calculated Routes</h2>
+        ${routes.map(route => `
+            <div class="route-item">
+                <h3>Van ${route.vanNumber} (${route.totalPassengers}/${route.seatCount} seats)</h3>
+                <p>Estimated time: ${route.estimatedMinutes} minutes</p>
+                <ol>
+                    ${route.locations.map(loc => 
+                        `<li>${loc.name} (${loc.passengerCount} passengers)</li>`
+                    ).join('')}
+                </ol>
+            </div>
+        `).join('')}
+    `;
 }
