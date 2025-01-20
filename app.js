@@ -1,6 +1,28 @@
 let vans = [];
 let locations = [];
 
+const MOCK_DRIVE_TIMES = {
+    // Returns mock driving time in minutes between locations
+    getDriveTime: (location1, location2) => {
+        // Return a random time between 10-45 minutes
+        return Math.floor(Math.random() * 35) + 10;
+    }
+};
+
+function getRouteTime(locationList) {
+    let totalTime = 0;
+    
+    // Add up drive times between consecutive locations
+    for (let i = 0; i < locationList.length - 1; i++) {
+        totalTime += MOCK_DRIVE_TIMES.getDriveTime(locationList[i], locationList[i + 1]);
+    }
+    
+    // Add 5 minutes loading/unloading time per location
+    totalTime += locationList.length * 5;
+    
+    return totalTime;
+}
+
 function addVan() {
     const van = {
         id: Date.now().toString(),
