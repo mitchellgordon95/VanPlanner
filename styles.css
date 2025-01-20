@@ -44,6 +44,29 @@ input, select {
     padding: 3px;
 }
 
+.location-input {
+    width: 300px;
+}
+
+/* Style the Google Places Autocomplete dropdown */
+.pac-container {
+    z-index: 1051;
+    width: 300px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.pac-item {
+    padding: 8px;
+    cursor: pointer;
+}
+
+.pac-item:hover {
+    background-color: #f5f5f5;
+}
+
 #calculate {
     display: block;
     margin-top: 20px;

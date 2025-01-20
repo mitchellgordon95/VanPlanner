@@ -93,9 +93,10 @@ function renderLocations() {
     locationList.innerHTML = locations.map(location => `
         <div class="location-item">
             <input type="text" 
-                   placeholder="Location name" 
+                   class="location-input"
+                   placeholder="Enter address" 
                    value="${location.name}"
-                   onchange="updateLocationName('${location.id}', this.value)">
+                   data-location-id="${location.id}">
             <input type="number" 
                    min="1" 
                    value="${location.passengerCount}"
@@ -103,6 +104,22 @@ function renderLocations() {
             <button onclick="deleteLocation('${location.id}')">Delete</button>
         </div>
     `).join('');
+
+    // Initialize autocomplete for each location input
+    document.querySelectorAll('.location-input').forEach(input => {
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            fields: ['formatted_address', 'geometry'],
+            types: ['address']
+        });
+
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (place.formatted_address) {
+                const locationId = input.dataset.locationId;
+                updateLocationName(locationId, place.formatted_address);
+            }
+        });
+    });
 }
 
 function updateVanSeats(id, seats) {
@@ -112,7 +129,11 @@ function updateVanSeats(id, seats) {
 
 function updateLocationName(id, name) {
     const location = locations.find(l => l.id === id);
-    if (location) location.name = name;
+    if (location) {
+        location.name = name;
+        // Optionally store the formatted address for display
+        location.formattedAddress = name;
+    }
 }
 
 function updatePassengerCount(id, count) {
