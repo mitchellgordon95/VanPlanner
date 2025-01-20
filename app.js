@@ -71,7 +71,6 @@ function renderLocations() {
                    onchange="updateLocationName('${location.id}', this.value)">
             <input type="number" 
                    min="1" 
-                   max="5" 
                    value="${location.passengerCount}"
                    onchange="updatePassengerCount('${location.id}', this.value)">
             <button onclick="deleteLocation('${location.id}')">Delete</button>
