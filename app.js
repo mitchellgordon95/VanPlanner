@@ -1,20 +1,47 @@
 let vans = [];
 let locations = [];
 
-const MOCK_DRIVE_TIMES = {
-    // Returns mock driving time in minutes between locations
-    getDriveTime: (location1, location2) => {
-        // Return a random time between 10-45 minutes
-        return Math.floor(Math.random() * 35) + 10;
+const GoogleMapsService = {
+    distanceMatrix: null,
+
+    init() {
+        this.distanceMatrix = new google.maps.DistanceMatrixService();
+    },
+
+    async getDriveTime(location1, location2) {
+        try {
+            const response = await this.distanceMatrix.getDistanceMatrix({
+                origins: [location1.name],
+                destinations: [location2.name],
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.METRIC,
+            });
+
+            if (response.rows[0].elements[0].status === 'OK') {
+                // Convert seconds to minutes and round
+                return Math.round(response.rows[0].elements[0].duration.value / 60);
+            } else {
+                console.error('Route not found between locations');
+                return null;
+            }
+        } catch (error) {
+            console.error('Error getting drive time:', error);
+            return null;
+        }
     }
 };
 
-function getRouteTime(locationList) {
+async function getRouteTime(locationList) {
     let totalTime = 0;
     
     // Add up drive times between consecutive locations
     for (let i = 0; i < locationList.length - 1; i++) {
-        totalTime += MOCK_DRIVE_TIMES.getDriveTime(locationList[i], locationList[i + 1]);
+        const time = await GoogleMapsService.getDriveTime(
+            locationList[i], 
+            locationList[i + 1]
+        );
+        if (time === null) return null;
+        totalTime += time;
     }
     
     // Add 5 minutes loading/unloading time per location
@@ -114,7 +141,7 @@ function updateCalculateButton() {
     button.disabled = vans.length === 0 || locations.length === 0;
 }
 
-function calculateRoutes() {
+async function calculateRoutes() {
     // Reset any previous results
     const results = [];
     let unassignedLocations = [...locations];
@@ -148,7 +175,8 @@ function calculateRoutes() {
                 for (let i = 0; i <= route.locations.length; i++) {
                     const testRoute = [...route.locations];
                     testRoute.splice(i, 0, location);
-                    const newTime = getRouteTime(testRoute);
+                    const newTime = await getRouteTime(testRoute);
+                    if (newTime === null) continue;
                     const addedTime = newTime - route.estimatedMinutes;
 
                     if (addedTime < bestAddedTime) {
@@ -165,7 +193,7 @@ function calculateRoutes() {
             // Add the best location found to the route
             route.locations.splice(bestIndex, 0, bestLocation);
             route.totalPassengers += bestLocation.passengerCount;
-            route.estimatedMinutes = getRouteTime(route.locations);
+            route.estimatedMinutes = await getRouteTime(route.locations);
             
             // Remove this location from unassigned list
             unassignedLocations = unassignedLocations.filter(l => l.id !== bestLocation.id);
@@ -183,6 +211,9 @@ function calculateRoutes() {
 
     displayRoutes(results);
 }
+
+// Initialize Google Maps service
+GoogleMapsService.init();
 
 function displayRoutes(routes) {
     // Create a results section if it doesn't exist
