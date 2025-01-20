@@ -4,7 +4,8 @@ let locations = [];
 function addVan() {
     const van = {
         id: Date.now().toString(),
-        seatCount: 6
+        seatCount: 6,
+        vanNumber: vans.length + 1
     };
     vans.push(van);
     renderVans();
@@ -26,6 +27,7 @@ function renderVans() {
     const vanList = document.getElementById('van-list');
     vanList.innerHTML = vans.map(van => `
         <div class="van-item">
+            <span>Van ${van.vanNumber}</span>
             <label>Seats:
                 <select onchange="updateVanSeats('${van.id}', this.value)">
                     <option value="6" ${van.seatCount === 6 ? 'selected' : ''}>6</option>
@@ -72,6 +74,10 @@ function updatePassengerCount(id, count) {
 
 function deleteVan(id) {
     vans = vans.filter(v => v.id !== id);
+    // Renumber remaining vans
+    vans.forEach((van, index) => {
+        van.vanNumber = index + 1;
+    });
     renderVans();
     updateCalculateButton();
 }
