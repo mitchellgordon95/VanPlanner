@@ -4,7 +4,21 @@
     padding: 20px;
 }
 
+.flex-container {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+#van-section, #location-section {
+    flex: 1;
+    min-width: 0; /* Prevents flex items from overflowing */
+}
+
 section {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 8px;
     margin-bottom: 20px;
 }
 
