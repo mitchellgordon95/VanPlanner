@@ -105,8 +105,8 @@ const GoogleMapsService = {
 
 async function calculateSavings(location1, location2) {
     console.log(`\nCalculating savings between: 
-        Location 1: ${location1.name}
-        Location 2: ${location2.name}`);
+        Location 1: ${location1.name} ${location1.splitInfo || ''}
+        Location 2: ${location2.name} ${location2.splitInfo || ''}`);
     
     const depot1Time = await GoogleMapsService.getDriveTime(depot, location1);
     const depot2Time = await GoogleMapsService.getDriveTime(depot, location2);
@@ -388,8 +388,8 @@ async function calculateRoutes() {
 
     savingsList.sort((a, b) => b.savings - a.savings);
     console.log('\nSorted savings list:', savingsList.map(s => ({
-        location1: s.location1.name,
-        location2: s.location2.name,
+        location1: `${s.location1.name} ${s.location1.splitInfo || ''}`,
+        location2: `${s.location2.name} ${s.location2.splitInfo || ''}`,
         savings: s.savings
     })));
 
@@ -404,8 +404,8 @@ async function calculateRoutes() {
     console.log('\n--- Merging Routes Based on Savings ---');
     for (const saving of savingsList) {
         console.log(`\nProcessing saving pair:
-            Location 1: ${saving.location1.name}
-            Location 2: ${saving.location2.name}
+            Location 1: ${saving.location1.name} ${saving.location1.splitInfo || ''}
+            Location 2: ${saving.location2.name} ${saving.location2.splitInfo || ''}
             Potential saving: ${saving.savings} minutes`);
 
         const route1 = routes.find(r => 
@@ -440,7 +440,7 @@ async function calculateRoutes() {
             const estimatedMinutes = await getRouteTime(mergedLocations);
             
             console.log(`Merged route details:
-                Locations: ${mergedLocations.map(l => l.name).join(' → ')}
+                Locations: ${mergedLocations.map(l => `${l.name} ${l.splitInfo || ''}`).join(' → ')}
                 Total time: ${estimatedMinutes} minutes`);
 
             const mergedRoute = {
@@ -584,7 +584,7 @@ function displayRoutes(routes) {
                            Estimated time: ${route.estimatedMinutes} minutes RT</p>
                         <ol>
                             ${route.locations.map(loc => 
-                                `<li>${loc.name} (${loc.passengerCount} passengers)</li>`
+                                `<li>${loc.name} ${loc.splitInfo || ''} (${loc.passengerCount} passengers)</li>`
                             ).join('')}
                         </ol>
                     </div>
