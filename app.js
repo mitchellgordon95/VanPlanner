@@ -130,7 +130,7 @@ function renderLocations() {
     // Initialize autocomplete for each location input
     document.querySelectorAll('.location-input').forEach(input => {
         const autocomplete = new google.maps.places.Autocomplete(input, {
-            fields: ['formatted_address', 'geometry'],
+            fields: ['formatted_address', 'geometry', 'address_components'],
             types: ['address']
         });
 
@@ -138,6 +138,16 @@ function renderLocations() {
             const place = autocomplete.getPlace();
             if (place.formatted_address) {
                 const locationId = input.dataset.locationId;
+                
+                // Check if address has a street number
+                const hasStreetNumber = place.address_components?.some(
+                    component => component.types.includes('street_number')
+                );
+                
+                if (!hasStreetNumber) {
+                    alert('Warning: This address may be missing a street number. Please enter a complete street address for accurate routing.');
+                }
+                
                 updateLocationName(locationId, place.formatted_address);
             }
         });
@@ -155,8 +165,12 @@ function updateVanSeats(id, seats) {
 function updateLocationName(id, name) {
     const location = locations.find(l => l.id === id);
     if (location) {
+        // Check if address contains numbers (likely a street number)
+        if (!/\d/.test(name)) {
+            alert('Warning: This address may be missing a street number. Please enter a complete street address for accurate routing.');
+        }
+        
         location.name = name;
-        // Optionally store the formatted address for display
         location.formattedAddress = name;
         saveLocations();
     }
