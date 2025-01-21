@@ -181,3 +181,17 @@ input, select {
     visibility: visible;
     opacity: 1;
 }
+
+.clear-button {
+    margin-left: 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.clear-button:hover {
+    background-color: #c82333;
+}

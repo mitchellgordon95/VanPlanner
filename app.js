@@ -496,6 +496,25 @@ async function calculateRoutes() {
     }
 }
 
+function clearData() {
+    if (confirm('Are you sure you want to clear all saved data?')) {
+        localStorage.clear();
+        locations = [];
+        vans = [];
+        depot = { name: '', id: 'depot' };
+        renderVans();
+        renderLocations();
+        document.getElementById('depot-input').value = '';
+        updateCalculateButton();
+        
+        // Clear results section if it exists
+        const resultsSection = document.getElementById('results-section');
+        if (resultsSection) {
+            resultsSection.innerHTML = '';
+        }
+    }
+}
+
 // Initialize Google Maps service
 GoogleMapsService.init();
 loadState();
