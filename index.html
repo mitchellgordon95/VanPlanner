@@ -31,15 +31,17 @@
             </section>
         </div>
 
-        <button id="calculate" onclick="calculateRoutes()" disabled>Calculate Routes</button>
-        <div class="tooltip-container">
-            <span class="info-icon">ⓘ</span>
-            <div class="tooltip">
-                Using the Clarke and Wright savings algorithm for vehicle routing. 
-                This algorithm optimizes multiple delivery routes by maximizing the savings 
-                from combining two routes into one.
-                <a href="https://en.wikipedia.org/wiki/Clarke_and_Wright_savings_algorithm" 
-                   target="_blank">Learn more</a>
+        <div style="display: flex; align-items: center;">
+            <button id="calculate" onclick="calculateRoutes()" disabled>Calculate Routes</button>
+            <div class="tooltip-container">
+                <span class="info-icon">ⓘ</span>
+                <div class="tooltip">
+                    Using the Clarke and Wright savings algorithm for vehicle routing. 
+                    This algorithm optimizes multiple delivery routes by maximizing the savings 
+                    from combining two routes into one.
+                    <a href="https://aswani.ieor.berkeley.edu/teaching/FA15/151/lecture_notes/ieor151_lec18.pdf" 
+                       target="_blank">Learn more</a>
+                </div>
             </div>
         </div>
         <div class="loading-overlay">
