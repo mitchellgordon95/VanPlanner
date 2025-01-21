@@ -118,7 +118,8 @@ function renderLocations() {
                    class="location-input"
                    placeholder="Enter address" 
                    value="${location.name}"
-                   data-location-id="${location.id}">
+                   data-location-id="${location.id}"
+                   data-selected="false">
             <input type="number" 
                    min="1" 
                    value="${location.passengerCount}"
@@ -132,6 +133,11 @@ function renderLocations() {
         const autocomplete = new google.maps.places.Autocomplete(input, {
             fields: ['formatted_address', 'geometry', 'address_components'],
             types: ['address']
+        });
+
+        // Mark as unselected when user types
+        input.addEventListener('input', () => {
+            input.dataset.selected = 'false';
         });
 
         autocomplete.addListener('place_changed', () => {
@@ -148,6 +154,7 @@ function renderLocations() {
                     alert('Warning: This address may be missing a street number. Please enter a complete street address for accurate routing.');
                 }
                 
+                input.dataset.selected = 'true';
                 updateLocationName(locationId, place.formatted_address);
             }
         });
@@ -208,6 +215,13 @@ function updateCalculateButton() {
 }
 
 async function calculateRoutes() {
+    // Add validation before calculation
+    const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
+    if (unselectedLocations.length > 0) {
+        alert('Error: Some addresses are not properly selected from the dropdown. Please select a complete address for each location.');
+        return;
+    }
+
     // Reset any previous results
     const results = [];
     let unassignedLocations = [...locations];
