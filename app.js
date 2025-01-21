@@ -5,26 +5,37 @@ let depot = {
     id: 'depot'
 };
 
-function splitOverflowLocations(locations, maxCapacity) {
-    return locations.flatMap(location => {
-        if (location.passengerCount <= maxCapacity) {
-            return [{ ...location }];
+function splitOverflowLocations(locationList, maxCapacity) {
+    return locationList.flatMap(loc => {
+        // If location doesn't exceed capacity, return as is
+        if (loc.passengerCount <= maxCapacity) {
+            return [{
+                ...loc,
+                vanAssigned: false,
+                assignedVan: null,
+                isSecondTrip: false
+            }];
         }
         
-        // Split into multiple locations
-        const numSplits = Math.ceil(location.passengerCount / maxCapacity);
+        // Calculate how many trips needed
+        const numTrips = Math.ceil(loc.passengerCount / maxCapacity);
+        let remainingPassengers = loc.passengerCount;
         const splits = [];
-        let remainingPassengers = location.passengerCount;
         
-        for (let i = 0; i < numSplits; i++) {
-            const splitPassengers = Math.min(maxCapacity, remainingPassengers);
+        // Create each trip
+        for (let i = 0; i < numTrips; i++) {
+            const passengersThisTrip = Math.min(maxCapacity, remainingPassengers);
             splits.push({
-                ...location,
-                id: `${location.id}-split${i + 1}`,
-                passengerCount: splitPassengers,
-                originalLocation: true
+                ...loc,
+                id: `${loc.id}-trip${i + 1}`,
+                passengerCount: passengersThisTrip,
+                originalLocation: true,
+                splitInfo: `Trip ${i + 1} of ${numTrips}`,
+                vanAssigned: false,
+                assignedVan: null,
+                isSecondTrip: false
             });
-            remainingPassengers -= splitPassengers;
+            remainingPassengers -= passengersThisTrip;
         }
         
         return splits;
