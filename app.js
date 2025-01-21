@@ -445,6 +445,8 @@ GoogleMapsService.init();
 loadState();
 
 function displayRoutes(routes) {
+    console.log('displayRoutes called with:', routes);
+    
     let resultsSection = document.getElementById('results-section');
     if (!resultsSection) {
         resultsSection = document.createElement('section');
@@ -454,12 +456,15 @@ function displayRoutes(routes) {
 
     // Group routes by van
     const vanRoutes = {};
-    routes.filter(route => route.vanAssigned).forEach(route => {
-        if (!vanRoutes[route.assignedVan.vanNumber]) {
-            vanRoutes[route.assignedVan.vanNumber] = [];
+    routes.forEach(route => {
+        const vanNumber = route.vanNumber || route.assignedVan.vanNumber;
+        if (!vanRoutes[vanNumber]) {
+            vanRoutes[vanNumber] = [];
         }
-        vanRoutes[route.assignedVan.vanNumber].push(route);
+        vanRoutes[vanNumber].push(route);
     });
+
+    console.log('Grouped vanRoutes:', vanRoutes);
 
     resultsSection.innerHTML = `
         <h2>Calculated Routes</h2>
@@ -469,7 +474,7 @@ function displayRoutes(routes) {
                 ${vanRoutes.map((route, index) => `
                     <div ${route.isSecondTrip ? 'style="color: red;"' : ''}>
                         <p>${route.isSecondTrip ? 'Second Trip - ' : ''}
-                           ${route.totalPassengers}/${route.assignedVan.seatCount} seats, 
+                           ${route.totalPassengers}/${route.seatCount || route.assignedVan.seatCount} seats, 
                            Estimated time: ${route.estimatedMinutes} minutes RT</p>
                         <ol>
                             ${route.locations.map(loc => 
