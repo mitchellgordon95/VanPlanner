@@ -66,8 +66,27 @@ const GoogleMapsService = {
     }
 };
 
+async function calculateSavings(location1, location2) {
+    // Get costs (times) between locations
+    const depot1Time = await GoogleMapsService.getDriveTime(depot, location1);
+    const depot2Time = await GoogleMapsService.getDriveTime(depot, location2);
+    const location1to2Time = await GoogleMapsService.getDriveTime(location1, location2);
+    
+    if (depot1Time === null || depot2Time === null || location1to2Time === null) {
+        return null;
+    }
+    
+    // Calculate savings: (depot→1→depot) + (depot→2→depot) - (depot→1→2→depot)
+    return (depot1Time * 2) + (depot2Time * 2) - (depot1Time + location1to2Time + depot2Time);
+}
+
 async function getRouteTime(locationList) {
     let totalTime = 0;
+    
+    // Add time from depot to first location
+    const startTime = await GoogleMapsService.getDriveTime(depot, locationList[0]);
+    if (startTime === null) return null;
+    totalTime += startTime;
     
     // Add up drive times between consecutive locations
     for (let i = 0; i < locationList.length - 1; i++) {
@@ -78,6 +97,14 @@ async function getRouteTime(locationList) {
         if (time === null) return null;
         totalTime += time;
     }
+    
+    // Add time from last location back to depot
+    const endTime = await GoogleMapsService.getDriveTime(
+        locationList[locationList.length - 1], 
+        depot
+    );
+    if (endTime === null) return null;
+    totalTime += endTime;
     
     // Add 5 minutes loading/unloading time per location
     totalTime += locationList.length * 5;
@@ -251,76 +278,113 @@ function updateCalculateButton() {
 }
 
 async function calculateRoutes() {
-    // Add validation before calculation
+    // Validation
     const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
     if (unselectedLocations.length > 0) {
         alert('Error: Some addresses are not properly selected from the dropdown. Please select a complete address for each location.');
         return;
     }
 
-    // Reset any previous results
-    const results = [];
-    let unassignedLocations = [...locations];
-    
-    // For each van, create a route
-    for (const van of vans) {
-        if (unassignedLocations.length === 0) break;
-        
-        const route = {
-            vanNumber: van.vanNumber,
-            seatCount: van.seatCount,
-            locations: [],
-            totalPassengers: 0,
-            estimatedMinutes: 0
-        };
-
-        // Keep adding locations until we can't fit more passengers
-        while (unassignedLocations.length > 0) {
-            // Find the location that would add the least time to current route
-            let bestLocation = null;
-            let bestIndex = 0;
-            let bestAddedTime = Infinity;
-
-            for (const location of unassignedLocations) {
-                // Skip if adding these passengers would exceed van capacity
-                if (route.totalPassengers + location.passengerCount > van.seatCount) {
-                    continue;
-                }
-
-                // Try inserting this location at each possible position
-                for (let i = 0; i <= route.locations.length; i++) {
-                    const testRoute = [...route.locations];
-                    testRoute.splice(i, 0, location);
-                    const newTime = await getRouteTime(testRoute);
-                    if (newTime === null) continue;
-                    const addedTime = newTime - route.estimatedMinutes;
-
-                    if (addedTime < bestAddedTime) {
-                        bestAddedTime = addedTime;
-                        bestLocation = location;
-                        bestIndex = i;
-                    }
-                }
+    // Calculate savings for all location pairs
+    const savingsList = [];
+    for (let i = 0; i < locations.length; i++) {
+        for (let j = i + 1; j < locations.length; j++) {
+            const savings = await calculateSavings(locations[i], locations[j]);
+            if (savings !== null) {
+                savingsList.push({
+                    location1: locations[i],
+                    location2: locations[j],
+                    savings: savings
+                });
             }
-
-            // If we couldn't find a location to add, this van is done
-            if (!bestLocation) break;
-
-            // Add the best location found to the route
-            route.locations.splice(bestIndex, 0, bestLocation);
-            route.totalPassengers += bestLocation.passengerCount;
-            route.estimatedMinutes = await getRouteTime(route.locations);
-            
-            // Remove this location from unassigned list
-            unassignedLocations = unassignedLocations.filter(l => l.id !== bestLocation.id);
-        }
-
-        if (route.locations.length > 0) {
-            results.push(route);
         }
     }
 
+    // Sort savings in descending order
+    savingsList.sort((a, b) => b.savings - a.savings);
+
+    // Initialize routes (one per location initially)
+    let routes = locations.map(location => ({
+        locations: [location],
+        totalPassengers: location.passengerCount,
+        vanAssigned: false
+    }));
+
+    // Merge routes based on savings
+    for (const saving of savingsList) {
+        // Find routes containing these locations
+        const route1 = routes.find(r => r.locations.includes(saving.location1));
+        const route2 = routes.find(r => r.locations.includes(saving.location2));
+
+        // Skip if either location is already in a route with a van assigned
+        if (route1.vanAssigned || route2.vanAssigned) continue;
+
+        // Skip if they're already in the same route
+        if (route1 === route2) continue;
+
+        // Calculate total passengers for combined route
+        const totalPassengers = route1.totalPassengers + route2.totalPassengers;
+
+        // Find smallest van that can accommodate these passengers
+        const suitableVan = vans.find(van => 
+            van.seatCount >= totalPassengers && 
+            !routes.some(r => r.vanAssigned && r.assignedVan === van)
+        );
+
+        if (suitableVan) {
+            // Merge routes
+            const mergedLocations = [...route1.locations];
+            
+            // Add route2 locations to the end
+            mergedLocations.push(...route2.locations);
+
+            // Create new merged route
+            const mergedRoute = {
+                locations: mergedLocations,
+                totalPassengers: totalPassengers,
+                vanAssigned: true,
+                assignedVan: suitableVan,
+                estimatedMinutes: await getRouteTime(mergedLocations)
+            };
+
+            // Remove old routes and add merged route
+            routes = routes.filter(r => r !== route1 && r !== route2);
+            routes.push(mergedRoute);
+        }
+    }
+
+    // Assign remaining single-location routes to vans if possible
+    for (let route of routes) {
+        if (!route.vanAssigned) {
+            const suitableVan = vans.find(van => 
+                van.seatCount >= route.totalPassengers && 
+                !routes.some(r => r.vanAssigned && r.assignedVan === van)
+            );
+
+            if (suitableVan) {
+                route.vanAssigned = true;
+                route.assignedVan = suitableVan;
+                route.estimatedMinutes = await getRouteTime(route.locations);
+            }
+        }
+    }
+
+    // Format results for display
+    const results = routes
+        .filter(route => route.vanAssigned)
+        .map(route => ({
+            vanNumber: route.assignedVan.vanNumber,
+            seatCount: route.assignedVan.seatCount,
+            locations: route.locations,
+            totalPassengers: route.totalPassengers,
+            estimatedMinutes: route.estimatedMinutes
+        }));
+
     // Check for unassigned locations
+    const unassignedLocations = routes
+        .filter(route => !route.vanAssigned)
+        .flatMap(route => route.locations);
+
     if (unassignedLocations.length > 0) {
         alert('Warning: Not all locations could be assigned to routes. Need more vans or seats.');
     }
