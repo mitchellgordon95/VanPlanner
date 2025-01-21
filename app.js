@@ -390,18 +390,28 @@ async function calculateRoutes() {
     for (let route of routes) {
         if (!route.vanAssigned) {
             console.log(`\nProcessing unassigned route: ${route.locations[0].name}`);
-            const suitableVan = vans.find(van => 
-                van.seatCount >= route.totalPassengers && 
-                !routes.some(r => r.vanAssigned && r.assignedVan === van)
-            );
-
-            if (suitableVan) {
-                console.log(`Assigned to Van ${suitableVan.vanNumber}`);
+            // Find van with sufficient seats and shortest current route
+            const suitableVans = vans.filter(van => van.seatCount >= route.totalPassengers);
+        
+            if (suitableVans.length > 0) {
+                // Find which van has the shortest current route
+                let shortestTime = Infinity;
+                let bestVan = null;
+            
+                for (const van of suitableVans) {
+                    const currentRoute = routes.find(r => r.vanAssigned && r.assignedVan === van);
+                    const routeTime = currentRoute ? currentRoute.estimatedMinutes : 0;
+                    if (routeTime < shortestTime) {
+                        shortestTime = routeTime;
+                        bestVan = van;
+                    }
+                }
+            
+                console.log(`Assigned to Van ${bestVan.vanNumber} as second trip`);
                 route.vanAssigned = true;
-                route.assignedVan = suitableVan;
+                route.assignedVan = bestVan;
                 route.estimatedMinutes = await getRouteTime(route.locations);
-            } else {
-                console.log('No suitable van available');
+                route.isSecondTrip = true;
             }
         }
     }
@@ -435,7 +445,6 @@ GoogleMapsService.init();
 loadState();
 
 function displayRoutes(routes) {
-    // Create a results section if it doesn't exist
     let resultsSection = document.getElementById('results-section');
     if (!resultsSection) {
         resultsSection = document.createElement('section');
@@ -443,17 +452,32 @@ function displayRoutes(routes) {
         document.querySelector('.container').appendChild(resultsSection);
     }
 
+    // Group routes by van
+    const vanRoutes = {};
+    routes.filter(route => route.vanAssigned).forEach(route => {
+        if (!vanRoutes[route.assignedVan.vanNumber]) {
+            vanRoutes[route.assignedVan.vanNumber] = [];
+        }
+        vanRoutes[route.assignedVan.vanNumber].push(route);
+    });
+
     resultsSection.innerHTML = `
         <h2>Calculated Routes</h2>
-        ${routes.map(route => `
+        ${Object.entries(vanRoutes).map(([vanNumber, vanRoutes]) => `
             <div class="route-item">
-                <h3>Van ${route.vanNumber} (${route.totalPassengers}/${route.seatCount} seats)</h3>
-                <p>Estimated time: ${route.estimatedMinutes} minutes RT</p>
-                <ol>
-                    ${route.locations.map(loc => 
-                        `<li>${loc.name} (${loc.passengerCount} passengers)</li>`
-                    ).join('')}
-                </ol>
+                <h3>Van ${vanNumber}</h3>
+                ${vanRoutes.map((route, index) => `
+                    <div ${route.isSecondTrip ? 'style="color: red;"' : ''}>
+                        <p>${route.isSecondTrip ? 'Second Trip - ' : ''}
+                           ${route.totalPassengers}/${route.assignedVan.seatCount} seats, 
+                           Estimated time: ${route.estimatedMinutes} minutes RT</p>
+                        <ol>
+                            ${route.locations.map(loc => 
+                                `<li>${loc.name} (${loc.passengerCount} passengers)</li>`
+                            ).join('')}
+                        </ol>
+                    </div>
+                `).join('')}
             </div>
         `).join('')}
     `;

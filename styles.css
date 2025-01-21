@@ -34,6 +34,12 @@ button {
     padding: 5px 10px;
 }
 
+.route-item div[style*="color: red"] {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #ccc;
+}
+
 .van-item span {
     display: inline-block;
     min-width: 60px;
