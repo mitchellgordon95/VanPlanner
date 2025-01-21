@@ -10,6 +10,14 @@ function loadState() {
     
     renderVans();
     renderLocations();
+    
+    // Mark loaded locations as selected
+    document.querySelectorAll('.location-input').forEach(input => {
+        if (input.value) {
+            input.dataset.selected = 'true';
+        }
+    });
+    
     updateCalculateButton();
 }
 
