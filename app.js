@@ -288,7 +288,11 @@ function updateCalculateButton() {
 }
 
 async function calculateRoutes() {
-    console.log('\n=== Starting Route Calculation ===');
+    // Show loading overlay
+    document.querySelector('.loading-overlay').style.display = 'flex';
+    
+    try {
+        console.log('\n=== Starting Route Calculation ===');
     console.log('Initial state:', 
         '\nDepot:', depot,
         '\nVans:', vans,
@@ -438,6 +442,13 @@ async function calculateRoutes() {
     }
 
     displayRoutes(results);
+    } catch (error) {
+        console.error('Error calculating routes:', error);
+        alert('An error occurred while calculating routes. Please try again.');
+    } finally {
+        // Hide loading overlay
+        document.querySelector('.loading-overlay').style.display = 'none';
+    }
 }
 
 // Initialize Google Maps service
