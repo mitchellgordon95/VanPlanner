@@ -460,9 +460,9 @@ async function calculateRoutes() {
     }
 
     console.log('\n--- Processing Remaining Single-Location Routes ---');
-    for (let route of routes) {
+    routes = await Promise.all(routes.map(async route => {
         if (!route.vanAssigned) {
-            console.log(`\nProcessing unassigned route: ${route.locations[0].name}`);
+            console.log(`\nProcessing unassigned route: ${route.locations[0].name} ${route.locations[0].splitInfo || ''}`);
             // Find van with sufficient seats and shortest current route
             const suitableVans = vans.filter(van => van.seatCount >= route.totalPassengers);
         
@@ -481,13 +481,20 @@ async function calculateRoutes() {
                 }
             
                 console.log(`Assigned to Van ${bestVan.vanNumber} as second trip`);
-                route.vanAssigned = true;
-                route.assignedVan = bestVan;
-                route.estimatedMinutes = await getRouteTime(route.locations);
-                route.isSecondTrip = true;
+                const estimatedMinutes = await getRouteTime(route.locations);
+                
+                // Create new route object instead of mutating
+                return {
+                    ...route,
+                    vanAssigned: true,
+                    assignedVan: bestVan,
+                    estimatedMinutes,
+                    isSecondTrip: true
+                };
             }
         }
-    }
+        return route;
+    }));
 
     console.log('\n--- Final Routes ---');
     const results = routes
