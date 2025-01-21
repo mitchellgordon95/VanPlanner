@@ -448,7 +448,7 @@ function displayRoutes(routes) {
         ${routes.map(route => `
             <div class="route-item">
                 <h3>Van ${route.vanNumber} (${route.totalPassengers}/${route.seatCount} seats)</h3>
-                <p>Estimated time: ${route.estimatedMinutes} minutes</p>
+                <p>Estimated time: ${route.estimatedMinutes} minutes RT</p>
                 <ol>
                     ${route.locations.map(loc => 
                         `<li>${loc.name} (${loc.passengerCount} passengers)</li>`
