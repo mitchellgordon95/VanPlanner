@@ -67,17 +67,27 @@ const GoogleMapsService = {
 };
 
 async function calculateSavings(location1, location2) {
-    // Get costs (times) between locations
+    console.log(`\nCalculating savings between: 
+        Location 1: ${location1.name}
+        Location 2: ${location2.name}`);
+    
     const depot1Time = await GoogleMapsService.getDriveTime(depot, location1);
     const depot2Time = await GoogleMapsService.getDriveTime(depot, location2);
     const location1to2Time = await GoogleMapsService.getDriveTime(location1, location2);
     
+    console.log(`Drive times:
+        Depot → Location1: ${depot1Time} minutes
+        Depot → Location2: ${depot2Time} minutes
+        Location1 → Location2: ${location1to2Time} minutes`);
+    
     if (depot1Time === null || depot2Time === null || location1to2Time === null) {
+        console.log('Error: Could not calculate one or more drive times');
         return null;
     }
     
-    // Calculate savings: (depot→1→depot) + (depot→2→depot) - (depot→1→2→depot)
-    return (depot1Time * 2) + (depot2Time * 2) - (depot1Time + location1to2Time + depot2Time);
+    const savings = (depot1Time * 2) + (depot2Time * 2) - (depot1Time + location1to2Time + depot2Time);
+    console.log(`Calculated savings: ${savings} minutes`);
+    return savings;
 }
 
 async function getRouteTime(locationList) {
@@ -278,14 +288,21 @@ function updateCalculateButton() {
 }
 
 async function calculateRoutes() {
+    console.log('\n=== Starting Route Calculation ===');
+    console.log('Initial state:', 
+        '\nDepot:', depot,
+        '\nVans:', vans,
+        '\nLocations:', locations);
+
     // Validation
     const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
     if (unselectedLocations.length > 0) {
+        console.log('Validation failed: Unselected locations found');
         alert('Error: Some addresses are not properly selected from the dropdown. Please select a complete address for each location.');
         return;
     }
 
-    // Calculate savings for all location pairs
+    console.log('\n--- Calculating Savings Matrix ---');
     const savingsList = [];
     for (let i = 0; i < locations.length; i++) {
         for (let j = i + 1; j < locations.length; j++) {
@@ -300,76 +317,96 @@ async function calculateRoutes() {
         }
     }
 
-    // Sort savings in descending order
     savingsList.sort((a, b) => b.savings - a.savings);
+    console.log('\nSorted savings list:', savingsList.map(s => ({
+        location1: s.location1.name,
+        location2: s.location2.name,
+        savings: s.savings
+    })));
 
-    // Initialize routes (one per location initially)
+    console.log('\n--- Initializing Routes ---');
     let routes = locations.map(location => ({
         locations: [location],
         totalPassengers: location.passengerCount,
         vanAssigned: false
     }));
+    console.log('Initial routes:', routes);
 
-    // Merge routes based on savings
+    console.log('\n--- Merging Routes Based on Savings ---');
     for (const saving of savingsList) {
-        // Find routes containing these locations
+        console.log(`\nProcessing saving pair:
+            Location 1: ${saving.location1.name}
+            Location 2: ${saving.location2.name}
+            Potential saving: ${saving.savings} minutes`);
+
         const route1 = routes.find(r => r.locations.includes(saving.location1));
         const route2 = routes.find(r => r.locations.includes(saving.location2));
 
-        // Skip if either location is already in a route with a van assigned
-        if (route1.vanAssigned || route2.vanAssigned) continue;
+        if (route1.vanAssigned || route2.vanAssigned) {
+            console.log('Skip: One or both routes already assigned to a van');
+            continue;
+        }
 
-        // Skip if they're already in the same route
-        if (route1 === route2) continue;
+        if (route1 === route2) {
+            console.log('Skip: Locations already in same route');
+            continue;
+        }
 
-        // Calculate total passengers for combined route
         const totalPassengers = route1.totalPassengers + route2.totalPassengers;
+        console.log(`Combined passengers: ${totalPassengers}`);
 
-        // Find smallest van that can accommodate these passengers
         const suitableVan = vans.find(van => 
             van.seatCount >= totalPassengers && 
             !routes.some(r => r.vanAssigned && r.assignedVan === van)
         );
 
         if (suitableVan) {
-            // Merge routes
-            const mergedLocations = [...route1.locations];
+            console.log(`Found suitable van: Van ${suitableVan.vanNumber} (${suitableVan.seatCount} seats)`);
             
-            // Add route2 locations to the end
-            mergedLocations.push(...route2.locations);
+            const mergedLocations = [...route1.locations, ...route2.locations];
+            const estimatedMinutes = await getRouteTime(mergedLocations);
+            
+            console.log(`Merged route details:
+                Locations: ${mergedLocations.map(l => l.name).join(' → ')}
+                Total time: ${estimatedMinutes} minutes`);
 
-            // Create new merged route
             const mergedRoute = {
                 locations: mergedLocations,
                 totalPassengers: totalPassengers,
                 vanAssigned: true,
                 assignedVan: suitableVan,
-                estimatedMinutes: await getRouteTime(mergedLocations)
+                estimatedMinutes: estimatedMinutes
             };
 
-            // Remove old routes and add merged route
             routes = routes.filter(r => r !== route1 && r !== route2);
             routes.push(mergedRoute);
+            console.log('Routes after merge:', routes);
+        } else {
+            console.log('No suitable van found for merge');
         }
     }
 
-    // Assign remaining single-location routes to vans if possible
+    console.log('\n--- Processing Remaining Single-Location Routes ---');
     for (let route of routes) {
         if (!route.vanAssigned) {
+            console.log(`\nProcessing unassigned route: ${route.locations[0].name}`);
             const suitableVan = vans.find(van => 
                 van.seatCount >= route.totalPassengers && 
                 !routes.some(r => r.vanAssigned && r.assignedVan === van)
             );
 
             if (suitableVan) {
+                console.log(`Assigned to Van ${suitableVan.vanNumber}`);
                 route.vanAssigned = true;
                 route.assignedVan = suitableVan;
                 route.estimatedMinutes = await getRouteTime(route.locations);
+            } else {
+                console.log('No suitable van available');
             }
         }
     }
 
-    // Format results for display
+    console.log('\n--- Final Routes ---');
     const results = routes
         .filter(route => route.vanAssigned)
         .map(route => ({
@@ -379,13 +416,14 @@ async function calculateRoutes() {
             totalPassengers: route.totalPassengers,
             estimatedMinutes: route.estimatedMinutes
         }));
+    console.log('Results:', results);
 
-    // Check for unassigned locations
     const unassignedLocations = routes
         .filter(route => !route.vanAssigned)
         .flatMap(route => route.locations);
 
     if (unassignedLocations.length > 0) {
+        console.log('Warning: Unassigned locations:', unassignedLocations);
         alert('Warning: Not all locations could be assigned to routes. Need more vans or seats.');
     }
 
