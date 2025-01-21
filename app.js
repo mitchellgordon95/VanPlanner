@@ -1,6 +1,26 @@
 let vans = [];
 let locations = [];
 
+function loadState() {
+    const savedVans = localStorage.getItem('vans');
+    const savedLocations = localStorage.getItem('locations');
+    
+    if (savedVans) vans = JSON.parse(savedVans);
+    if (savedLocations) locations = JSON.parse(savedLocations);
+    
+    renderVans();
+    renderLocations();
+    updateCalculateButton();
+}
+
+function saveVans() {
+    localStorage.setItem('vans', JSON.stringify(vans));
+}
+
+function saveLocations() {
+    localStorage.setItem('locations', JSON.stringify(locations));
+}
+
 const GoogleMapsService = {
     distanceMatrix: null,
 
@@ -59,6 +79,7 @@ function addVan() {
     vans.push(van);
     renderVans();
     updateCalculateButton();
+    saveVans();
 }
 
 function addLocation() {
@@ -70,6 +91,7 @@ function addLocation() {
     locations.push(location);
     renderLocations();
     updateCalculateButton();
+    saveLocations();
 }
 
 function renderVans() {
@@ -124,7 +146,10 @@ function renderLocations() {
 
 function updateVanSeats(id, seats) {
     const van = vans.find(v => v.id === id);
-    if (van) van.seatCount = parseInt(seats);
+    if (van) {
+        van.seatCount = parseInt(seats);
+        saveVans();
+    }
 }
 
 function updateLocationName(id, name) {
@@ -133,12 +158,16 @@ function updateLocationName(id, name) {
         location.name = name;
         // Optionally store the formatted address for display
         location.formattedAddress = name;
+        saveLocations();
     }
 }
 
 function updatePassengerCount(id, count) {
     const location = locations.find(l => l.id === id);
-    if (location) location.passengerCount = parseInt(count);
+    if (location) {
+        location.passengerCount = parseInt(count);
+        saveLocations();
+    }
 }
 
 function deleteVan(id) {
@@ -149,12 +178,14 @@ function deleteVan(id) {
     });
     renderVans();
     updateCalculateButton();
+    saveVans();
 }
 
 function deleteLocation(id) {
     locations = locations.filter(l => l.id !== id);
     renderLocations();
     updateCalculateButton();
+    saveLocations();
 }
 
 function updateCalculateButton() {
@@ -235,6 +266,7 @@ async function calculateRoutes() {
 
 // Initialize Google Maps service
 GoogleMapsService.init();
+loadState();
 
 function displayRoutes(routes) {
     // Create a results section if it doesn't exist
