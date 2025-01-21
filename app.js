@@ -106,8 +106,8 @@ async function getRouteTime(locationList) {
     if (endTime === null) return null;
     totalTime += endTime;
     
-    // Add 5 minutes loading/unloading time per location
-    totalTime += locationList.length * 5;
+    // Add 2.5 minutes loading/unloading time per location
+    totalTime += locationList.length * 2.5;
     
     return totalTime;
 }
