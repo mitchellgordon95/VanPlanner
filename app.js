@@ -1,15 +1,22 @@
 let vans = [];
 let locations = [];
+let depot = {
+    name: '',
+    id: 'depot'
+};
 
 function loadState() {
     const savedVans = localStorage.getItem('vans');
     const savedLocations = localStorage.getItem('locations');
+    const savedDepot = localStorage.getItem('depot');
     
     if (savedVans) vans = JSON.parse(savedVans);
     if (savedLocations) locations = JSON.parse(savedLocations);
+    if (savedDepot) depot = JSON.parse(savedDepot);
     
     renderVans();
     renderLocations();
+    initializeDepotAutocomplete();
     
     // Mark loaded locations as selected
     document.querySelectorAll('.location-input').forEach(input => {
@@ -217,9 +224,30 @@ function deleteLocation(id) {
     saveLocations();
 }
 
+function initializeDepotAutocomplete() {
+    const input = document.getElementById('depot-input');
+    input.value = depot.name;
+    
+    const autocomplete = new google.maps.places.Autocomplete(input, {
+        fields: ['formatted_address'],
+        types: ['address']
+    });
+
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place.formatted_address) {
+            depot.name = place.formatted_address;
+            localStorage.setItem('depot', JSON.stringify(depot));
+            updateCalculateButton();
+        }
+    });
+}
+
 function updateCalculateButton() {
     const button = document.getElementById('calculate');
-    button.disabled = vans.length === 0 || locations.length === 0;
+    button.disabled = vans.length === 0 || 
+                     locations.length === 0 || 
+                     !depot.name;
 }
 
 async function calculateRoutes() {
