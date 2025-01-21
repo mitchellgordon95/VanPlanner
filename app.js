@@ -290,16 +290,23 @@ function deleteLocation(id) {
 function initializeDepotAutocomplete() {
     const input = document.getElementById('depot-input');
     input.value = depot.name;
+    input.dataset.selected = depot.name ? 'true' : 'false';
     
     const autocomplete = new google.maps.places.Autocomplete(input, {
         fields: ['formatted_address'],
         types: ['address']
     });
 
+    input.addEventListener('input', () => {
+        input.dataset.selected = 'false';
+        updateCalculateButton();
+    });
+
     autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         if (place.formatted_address) {
             depot.name = place.formatted_address;
+            input.dataset.selected = 'true';
             localStorage.setItem('depot', JSON.stringify(depot));
             updateCalculateButton();
         }
@@ -308,9 +315,15 @@ function initializeDepotAutocomplete() {
 
 function updateCalculateButton() {
     const button = document.getElementById('calculate');
+    const depotInput = document.getElementById('depot-input');
+    const locationInputs = document.querySelectorAll('.location-input');
+    const allLocationsSelected = Array.from(locationInputs).every(input => input.dataset.selected === 'true');
+    const depotSelected = depotInput.dataset.selected === 'true';
+    
     button.disabled = vans.length === 0 || 
                      locations.length === 0 || 
-                     !depot.name;
+                     !depotSelected ||
+                     !allLocationsSelected;
 }
 
 async function calculateRoutes() {
