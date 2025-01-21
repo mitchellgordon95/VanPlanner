@@ -5,6 +5,32 @@ let depot = {
     id: 'depot'
 };
 
+function splitOverflowLocations(locations, maxCapacity) {
+    return locations.flatMap(location => {
+        if (location.passengerCount <= maxCapacity) {
+            return [{ ...location }];
+        }
+        
+        // Split into multiple locations
+        const numSplits = Math.ceil(location.passengerCount / maxCapacity);
+        const splits = [];
+        let remainingPassengers = location.passengerCount;
+        
+        for (let i = 0; i < numSplits; i++) {
+            const splitPassengers = Math.min(maxCapacity, remainingPassengers);
+            splits.push({
+                ...location,
+                id: `${location.id}-split${i + 1}`,
+                passengerCount: splitPassengers,
+                originalLocation: true
+            });
+            remainingPassengers -= splitPassengers;
+        }
+        
+        return splits;
+    });
+}
+
 function loadState() {
     const savedVans = localStorage.getItem('vans');
     const savedLocations = localStorage.getItem('locations');
@@ -288,17 +314,22 @@ function updateCalculateButton() {
 }
 
 async function calculateRoutes() {
-    // Show loading overlay
     document.querySelector('.loading-overlay').style.display = 'flex';
     
     try {
+        // Find max van capacity
+        const maxVanCapacity = Math.max(...vans.map(van => van.seatCount));
+        
+        // Split locations that exceed max capacity
+        const processedLocations = splitOverflowLocations(locations, maxVanCapacity);
+        
         console.log('\n=== Starting Route Calculation ===');
-    console.log('Initial state:', 
-        '\nDepot:', depot,
-        '\nVans:', vans,
-        '\nLocations:', locations);
+        console.log('Initial state:', 
+            '\nDepot:', depot,
+            '\nVans:', vans,
+            '\nProcessed Locations:', processedLocations);
 
-    // Validation
+        // Validation
     const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
     if (unselectedLocations.length > 0) {
         console.log('Validation failed: Unselected locations found');
@@ -308,14 +339,24 @@ async function calculateRoutes() {
 
     console.log('\n--- Calculating Savings Matrix ---');
     const savingsList = [];
-    for (let i = 0; i < locations.length; i++) {
-        for (let j = i + 1; j < locations.length; j++) {
-            const savings = await calculateSavings(locations[i], locations[j]);
+    for (let i = 0; i < processedLocations.length; i++) {
+        for (let j = i + 1; j < processedLocations.length; j++) {
+            // Skip if these are split parts of the same original location
+            if (processedLocations[i].originalLocation && 
+                processedLocations[j].originalLocation && 
+                processedLocations[i].name === processedLocations[j].name) {
+                console.log(`Skipping savings calculation between split locations: ${processedLocations[i].id} and ${processedLocations[j].id}`);
+                continue;
+            }
+            
+            const savings = await calculateSavings(processedLocations[i], processedLocations[j]);
             if (savings !== null) {
                 savingsList.push({
-                    location1: locations[i],
-                    location2: locations[j],
-                    savings: savings
+                    location1: processedLocations[i],
+                    location2: processedLocations[j],
+                    savings: savings,
+                    location1Id: processedLocations[i].id,
+                    location2Id: processedLocations[j].id
                 });
             }
         }
@@ -329,7 +370,7 @@ async function calculateRoutes() {
     })));
 
     console.log('\n--- Initializing Routes ---');
-    let routes = locations.map(location => ({
+    let routes = processedLocations.map(location => ({
         locations: [location],
         totalPassengers: location.passengerCount,
         vanAssigned: false
@@ -343,8 +384,12 @@ async function calculateRoutes() {
             Location 2: ${saving.location2.name}
             Potential saving: ${saving.savings} minutes`);
 
-        const route1 = routes.find(r => r.locations.includes(saving.location1));
-        const route2 = routes.find(r => r.locations.includes(saving.location2));
+        const route1 = routes.find(r => 
+            r.locations.some(loc => loc.id === saving.location1Id)
+        );
+        const route2 = routes.find(r => 
+            r.locations.some(loc => loc.id === saving.location2Id)
+        );
 
         if (route1.vanAssigned || route2.vanAssigned) {
             console.log('Skip: One or both routes already assigned to a van');
