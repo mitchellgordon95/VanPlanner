@@ -1,5 +1,8 @@
 {
   "dependencies": {
     "dotenv": "^16.4.7"
+  },
+  "scripts": {
+    "dev": "node build.js"
   }
 }
