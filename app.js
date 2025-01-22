@@ -396,7 +396,40 @@ async function calculateRoutes() {
 
         console.log('Initial routes (one per location):', routes);
 
-        // TODO: Next step - calculate savings between all route pairs
+        // Calculate savings between each pair of routes
+        const savingsList = [];
+        for (let i = 0; i < routes.length; i++) {
+            for (let j = i + 1; j < routes.length; j++) {
+                const route1 = routes[i];
+                const route2 = routes[j];
+                
+                // Skip if these are split parts of the same original location
+                if (route1.locations[0].originalLocation && 
+                    route2.locations[0].originalLocation && 
+                    route1.locations[0].originalLocation.id === route2.locations[0].originalLocation.id) {
+                    console.log(`Skipping savings calculation between split routes: ${route1.locations[0].id} and ${route2.locations[0].id}`);
+                    continue;
+                }
+                
+                const savings = await calculateSavings(
+                    route1.locations[0], 
+                    route2.locations[0]
+                );
+                
+                if (savings !== null) {
+                    savingsList.push({
+                        route1: route1,
+                        route2: route2,
+                        savings: savings
+                    });
+                }
+            }
+        }
+
+        // Sort savings by highest first
+        savingsList.sort((a, b) => b.savings - a.savings);
+
+        console.log('Calculated savings:', savingsList);
 
         displayRoutes(routes);
     } catch (error) {
