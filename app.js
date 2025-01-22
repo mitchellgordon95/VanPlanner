@@ -355,10 +355,50 @@ async function calculateRoutes() {
             return;
         }
 
-        // TODO: Implement routing algorithm
-        const results = [];  // Mock empty results for now
+        // Find maximum van capacity
+        const maxVanCapacity = Math.max(...vans.map(van => van.seatCount));
+        console.log('Maximum van capacity:', maxVanCapacity);
 
-        displayRoutes(results);
+        // Split locations that exceed max capacity
+        const processedLocations = locations.flatMap(loc => {
+            if (loc.passengerCount <= maxVanCapacity) {
+                return [loc];
+            }
+            
+            // Calculate splits needed
+            const numSplits = Math.ceil(loc.passengerCount / maxVanCapacity);
+            let remainingPassengers = loc.passengerCount;
+            const splits = [];
+            
+            for (let i = 0; i < numSplits; i++) {
+                const passengersThisSplit = Math.min(maxVanCapacity, remainingPassengers);
+                splits.push({
+                    ...loc,
+                    id: `${loc.id}-split${i + 1}`,
+                    passengerCount: passengersThisSplit,
+                    originalLocation: loc,
+                    splitInfo: `Split ${i + 1} of ${numSplits}`
+                });
+                remainingPassengers -= passengersThisSplit;
+            }
+            
+            return splits;
+        });
+
+        console.log('Processed locations after splitting:', processedLocations);
+
+        // Initialize one route per location
+        const routes = processedLocations.map(location => ({
+            locations: [location],
+            totalPassengers: location.passengerCount,
+            estimatedMinutes: null  // Will calculate this later
+        }));
+
+        console.log('Initial routes (one per location):', routes);
+
+        // TODO: Next step - calculate savings between all route pairs
+
+        displayRoutes(routes);
     } catch (error) {
         console.error('Error calculating routes:', error);
         alert('An error occurred while calculating routes. Please try again.');
