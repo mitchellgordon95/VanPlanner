@@ -5,43 +5,6 @@ let depot = {
     id: 'depot'
 };
 
-function splitOverflowLocations(locationList, maxCapacity) {
-    return locationList.flatMap(loc => {
-        // If location doesn't exceed capacity, return as is
-        if (loc.passengerCount <= maxCapacity) {
-            return [{
-                ...loc,
-                vanAssigned: false,
-                assignedVan: null,
-                isSecondTrip: false
-            }];
-        }
-        
-        // Calculate how many trips needed
-        const numTrips = Math.ceil(loc.passengerCount / maxCapacity);
-        let remainingPassengers = loc.passengerCount;
-        const splits = [];
-        
-        // Create each trip
-        for (let i = 0; i < numTrips; i++) {
-            const passengersThisTrip = Math.min(maxCapacity, remainingPassengers);
-            splits.push({
-                ...loc,
-                id: `${loc.id}-trip${i + 1}`,
-                passengerCount: passengersThisTrip,
-                originalLocation: true,
-                splitInfo: `Trip ${i + 1} of ${numTrips}`,
-                vanAssigned: false,
-                assignedVan: null,
-                isSecondTrip: false
-            });
-            remainingPassengers -= passengersThisTrip;
-        }
-        
-        return splits;
-    });
-}
-
 function loadState() {
     const savedVans = localStorage.getItem('vans');
     const savedLocations = localStorage.getItem('locations');
@@ -73,37 +36,7 @@ function saveLocations() {
     localStorage.setItem('locations', JSON.stringify(locations));
 }
 
-const GoogleMapsService = {
-    distanceMatrix: null,
-
-    init() {
-        this.distanceMatrix = new google.maps.DistanceMatrixService();
-    },
-
-    async getDriveTime(location1, location2) {
-        try {
-            const response = await this.distanceMatrix.getDistanceMatrix({
-                origins: [location1.name],
-                destinations: [location2.name],
-                travelMode: google.maps.TravelMode.DRIVING,
-                unitSystem: google.maps.UnitSystem.METRIC,
-            });
-
-            if (response.rows[0].elements[0].status === 'OK') {
-                // Convert seconds to minutes and round
-                return Math.round(response.rows[0].elements[0].duration.value / 60);
-            } else {
-                console.error('Route not found between locations');
-                return null;
-            }
-        } catch (error) {
-            console.error('Error getting drive time:', error);
-            return null;
-        }
-    }
-};
-
-async function calculateSavings(location1, location2) {
+async function calculateRoutes() {
     console.log(`\nCalculating savings between: 
         Location 1: ${location1.name} ${location1.splitInfo || ''}
         Location 2: ${location2.name} ${location2.splitInfo || ''}`);
