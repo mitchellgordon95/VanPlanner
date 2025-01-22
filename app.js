@@ -545,7 +545,7 @@ async function calculateRoutes() {
                 finalRoutes.push({
                     locations: route.locations,
                     totalPassengers: route.totalPassengers,
-                    vanNumber: availableVans.indexOf(suitableVan) + 1,  // Assign van numbers sequentially
+                    vanNumber: suitableVan.vanNumber,  // Use the van's actual number
                     seatCount: suitableVan.seatCount,
                     estimatedMinutes: routeTime
                 });
