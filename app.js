@@ -190,8 +190,9 @@ function renderVans() {
             <span>Van ${van.vanNumber}</span>
             <label>Seats:
                 <select onchange="updateVanSeats('${van.id}', this.value)">
-                    <option value="6" ${van.seatCount === 6 ? 'selected' : ''}>6</option>
-                    <option value="7" ${van.seatCount === 7 ? 'selected' : ''}>7</option>
+                    ${[...Array(10)].map((_, i) => 
+                        `<option value="${i + 1}" ${van.seatCount === i + 1 ? 'selected' : ''}>${i + 1}</option>`
+                    ).join('')}
                 </select>
             </label>
             <button onclick="deleteVan('${van.id}')">Delete</button>
