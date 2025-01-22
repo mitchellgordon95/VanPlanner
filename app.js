@@ -440,11 +440,17 @@ async function calculateRoutes() {
     Location 1: ${location1.name} ${location1.splitInfo || ''} (${location1.passengerCount} passengers)
     Location 2: ${location2.name} ${location2.splitInfo || ''} (${location2.passengerCount} passengers)
     Savings: ${savings} minutes`);
-            
+
             // Find routes containing these locations
             const route1 = routes.find(r => r.locations.includes(location1));
             const route2 = routes.find(r => r.locations.includes(location2));
-            
+
+            console.log('\nFound routes:');
+            console.log('Route 1:', route1.locations.map(l => `${l.name}${l.splitInfo ? ` (${l.splitInfo})` : ''}`).join(' → '), 
+                `(${route1.totalPassengers} passengers)`);
+            console.log('Route 2:', route2.locations.map(l => `${l.name}${l.splitInfo ? ` (${l.splitInfo})` : ''}`).join(' → '), 
+                `(${route2.totalPassengers} passengers)`);
+
             // Skip if locations are already in the same route
             if (route1 === route2) {
                 console.log('→ Skipping: Locations already in same route');
