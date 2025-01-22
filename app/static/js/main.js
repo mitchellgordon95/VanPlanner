@@ -5,6 +5,36 @@ let depot = {
     id: 'depot'
 };
 
+function loadState() {
+    const savedVans = localStorage.getItem('vans');
+    const savedLocations = localStorage.getItem('locations');
+    const savedDepot = localStorage.getItem('depot');
+    
+    if (savedVans) vans = JSON.parse(savedVans);
+    if (savedLocations) locations = JSON.parse(savedLocations);
+    if (savedDepot) depot = JSON.parse(savedDepot);
+    
+    renderVans();
+    renderLocations();
+    initializeDepotAutocomplete();
+    
+    document.querySelectorAll('.location-input').forEach(input => {
+        if (input.value) {
+            input.dataset.selected = 'true';
+        }
+    });
+    
+    updateCalculateButton();
+}
+
+function saveVans() {
+    localStorage.setItem('vans', JSON.stringify(vans));
+}
+
+function saveLocations() {
+    localStorage.setItem('locations', JSON.stringify(locations));
+}
+
 function addVan() {
     const van = {
         id: Date.now().toString(),
