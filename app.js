@@ -387,39 +387,27 @@ async function calculateRoutes() {
 
         console.log('Processed locations after splitting:', processedLocations);
 
-        // Initialize one route per location
-        const routes = processedLocations.map(location => ({
-            locations: [location],
-            totalPassengers: location.passengerCount,
-            estimatedMinutes: null  // Will calculate this later
-        }));
-
-        console.log('Initial routes (one per location):', routes);
-
-        // Calculate savings between each pair of routes
+        // Calculate savings between each pair of locations
         const savingsList = [];
-        for (let i = 0; i < routes.length; i++) {
-            for (let j = i + 1; j < routes.length; j++) {
-                const route1 = routes[i];
-                const route2 = routes[j];
+        for (let i = 0; i < processedLocations.length; i++) {
+            for (let j = i + 1; j < processedLocations.length; j++) {
+                const loc1 = processedLocations[i];
+                const loc2 = processedLocations[j];
                 
                 // Skip if these are split parts of the same original location
-                if (route1.locations[0].originalLocation && 
-                    route2.locations[0].originalLocation && 
-                    route1.locations[0].originalLocation.id === route2.locations[0].originalLocation.id) {
-                    console.log(`Skipping savings calculation between split routes: ${route1.locations[0].id} and ${route2.locations[0].id}`);
+                if (loc1.originalLocation && 
+                    loc2.originalLocation && 
+                    loc1.originalLocation.id === loc2.originalLocation.id) {
+                    console.log(`Skipping savings calculation between split locations: ${loc1.id} and ${loc2.id}`);
                     continue;
                 }
                 
-                const savings = await calculateSavings(
-                    route1.locations[0], 
-                    route2.locations[0]
-                );
+                const savings = await calculateSavings(loc1, loc2);
                 
                 if (savings !== null) {
                     savingsList.push({
-                        route1: route1,
-                        route2: route2,
+                        location1: loc1,
+                        location2: loc2,
                         savings: savings
                     });
                 }
@@ -431,7 +419,10 @@ async function calculateRoutes() {
 
         console.log('Calculated savings:', savingsList);
 
-        displayRoutes(routes);
+        // TODO: Now build routes using the savings list
+        // We'll implement the route building in the next step
+
+        displayRoutes([]); // temporary empty display
     } catch (error) {
         console.error('Error calculating routes:', error);
         alert('An error occurred while calculating routes. Please try again.');
