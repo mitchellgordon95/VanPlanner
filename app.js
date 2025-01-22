@@ -419,10 +419,107 @@ async function calculateRoutes() {
 
         console.log('Calculated savings:', savingsList);
 
-        // TODO: Now build routes using the savings list
-        // We'll implement the route building in the next step
+        // Sort vans by capacity descending
+        const sortedVans = [...vans].sort((a, b) => b.seatCount - a.seatCount);
+        let currentVanIndex = 0;
+        let currentMaxCapacity = sortedVans[currentVanIndex].seatCount;
 
-        displayRoutes([]); // temporary empty display
+        // Initialize routes - one location per route
+        let routes = processedLocations.map(location => ({
+            locations: [location],
+            totalPassengers: location.passengerCount
+        }));
+
+        console.log('Initial routes:', routes);
+
+        // Process savings list
+        for (const saving of savingsList) {
+            const { location1, location2 } = saving;
+            
+            // Find routes containing these locations
+            const route1 = routes.find(r => r.locations.includes(location1));
+            const route2 = routes.find(r => r.locations.includes(location2));
+            
+            // Skip if locations are already in the same route
+            if (route1 === route2) {
+                console.log('Locations already in same route, skipping');
+                continue;
+            }
+            
+            // Check if locations are interior nodes
+            const isLoc1Interior = route1.locations.indexOf(location1) !== 0 && 
+                                 route1.locations.indexOf(location1) !== route1.locations.length - 1;
+            const isLoc2Interior = route2.locations.indexOf(location2) !== 0 && 
+                                 route2.locations.indexOf(location2) !== route2.locations.length - 1;
+            
+            if (isLoc1Interior || isLoc2Interior) {
+                console.log('One or both locations are interior nodes, skipping');
+                continue;
+            }
+            
+            // Check combined passenger count
+            const totalPassengers = route1.totalPassengers + route2.totalPassengers;
+            if (totalPassengers > currentMaxCapacity) {
+                // If we hit capacity limit, move to next van size
+                if (currentVanIndex < sortedVans.length - 1) {
+                    currentVanIndex++;
+                    currentMaxCapacity = sortedVans[currentVanIndex].seatCount;
+                    console.log('Reducing max capacity to:', currentMaxCapacity);
+                }
+                console.log('Combined passengers exceed current capacity, skipping');
+                continue;
+            }
+            
+            // Merge the routes
+            let mergedLocations;
+            const loc1Index = route1.locations.indexOf(location1);
+            const loc2Index = route2.locations.indexOf(location2);
+            
+            // Order locations based on where connecting nodes are
+            if (loc1Index === 0) {
+                mergedLocations = [...route1.locations.reverse(), ...route2.locations];
+            } else if (loc1Index === route1.locations.length - 1) {
+                mergedLocations = [...route1.locations, ...route2.locations];
+            } else if (loc2Index === 0) {
+                mergedLocations = [...route2.locations, ...route1.locations];
+            } else {
+                mergedLocations = [...route1.locations, ...route2.locations.reverse()];
+            }
+            
+            const mergedRoute = {
+                locations: mergedLocations,
+                totalPassengers: totalPassengers
+            };
+            
+            // Remove old routes and add merged route
+            routes = routes.filter(r => r !== route1 && r !== route2);
+            routes.push(mergedRoute);
+            
+            console.log(`Merged routes, new route has ${mergedLocations.length} locations and ${totalPassengers} passengers`);
+        }
+
+        // Create dedicated routes for remaining single-location routes
+        const finalRoutes = [];
+        for (const route of routes) {
+            // Find smallest van that can handle this route
+            const suitableVan = sortedVans.find(van => van.seatCount >= route.totalPassengers);
+            
+            if (suitableVan) {
+                const routeTime = await getRouteTime(route.locations);
+                finalRoutes.push({
+                    locations: route.locations,
+                    totalPassengers: route.totalPassengers,
+                    vanNumber: suitableVan.vanNumber,
+                    seatCount: suitableVan.seatCount,
+                    estimatedMinutes: routeTime
+                });
+            } else {
+                console.error('Could not find suitable van for route:', route);
+            }
+        }
+
+        console.log('Final routes:', finalRoutes);
+        displayRoutes(finalRoutes);
     } catch (error) {
         console.error('Error calculating routes:', error);
         alert('An error occurred while calculating routes. Please try again.');
