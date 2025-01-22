@@ -534,13 +534,22 @@ async function calculateRoutes() {
 
         // Create dedicated routes for remaining single-location routes
         const finalRoutes = [];
-        const availableVans = [...sortedVans];  // Make a copy to track which vans are available
+        const vanRouteCount = {}; // Track number of routes per van
+
+        // Initialize route count for all vans
+        sortedVans.forEach(van => {
+            vanRouteCount[van.vanNumber] = 0;
+        });
 
         for (const route of routes) {
-            // Find smallest van that can handle this route
-            let suitableVan = availableVans.find(van => van.seatCount >= route.totalPassengers);
+            // Find all vans that can handle this route's capacity
+            const suitableVans = sortedVans.filter(van => van.seatCount >= route.totalPassengers);
             
-            if (suitableVan) {
+            if (suitableVans.length > 0) {
+                // Sort by number of routes assigned (ascending)
+                suitableVans.sort((a, b) => vanRouteCount[a.vanNumber] - vanRouteCount[b.vanNumber]);
+                const suitableVan = suitableVans[0]; // Pick van with fewest routes
+                
                 const routeTime = await getRouteTime(route.locations);
                 finalRoutes.push({
                     locations: route.locations,
@@ -548,29 +557,13 @@ async function calculateRoutes() {
                     vanNumber: suitableVan.vanNumber,
                     seatCount: suitableVan.seatCount,
                     estimatedMinutes: routeTime,
-                    isSecondTrip: false
+                    isSecondTrip: vanRouteCount[suitableVan.vanNumber] > 0
                 });
-                // Remove this van from available vans
-                availableVans.splice(availableVans.indexOf(suitableVan), 1);
-            } else {
-                // No available vans - look for a van that can do a second trip
-                suitableVan = sortedVans.find(van => van.seatCount >= route.totalPassengers);
                 
-                if (suitableVan) {
-                    const routeTime = await getRouteTime(route.locations);
-                    finalRoutes.push({
-                        locations: route.locations,
-                        totalPassengers: route.totalPassengers,
-                        vanNumber: suitableVan.vanNumber,
-                        seatCount: suitableVan.seatCount,
-                        estimatedMinutes: routeTime,
-                        isSecondTrip: true
-                    });
-                    console.log(`Assigned second trip to van ${suitableVan.vanNumber} for route:`, 
-                        route.locations.map(l => l.name).join(' → '));
-                } else {
-                    console.error('Could not find any suitable van for route:', route);
-                }
+                vanRouteCount[suitableVan.vanNumber]++;
+                console.log(`Assigned ${vanRouteCount[suitableVan.vanNumber] > 1 ? 'additional' : 'first'} trip to van ${suitableVan.vanNumber}. Current route counts:`, vanRouteCount);
+            } else {
+                console.error('Could not find any suitable van for route:', route);
             }
         }
 
