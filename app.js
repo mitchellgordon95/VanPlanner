@@ -468,12 +468,6 @@ async function calculateRoutes() {
             const totalPassengers = route1.totalPassengers + route2.totalPassengers;
             if (totalPassengers > currentMaxCapacity) {
                 console.log(`→ Skipping: Combined passengers (${totalPassengers}) exceeds current capacity (${currentMaxCapacity})`);
-                // If we hit capacity limit, move to next van size
-                if (currentVanIndex < sortedVans.length - 1) {
-                    currentVanIndex++;
-                    currentMaxCapacity = sortedVans[currentVanIndex].seatCount;
-                    console.log(`   Reducing max capacity to: ${currentMaxCapacity}`);
-                }
                 continue;
             }
             
@@ -513,6 +507,15 @@ async function calculateRoutes() {
             routes.forEach((route, i) => {
                 console.log(`Route ${i + 1}: ${route.locations.map(l => l.name).join(' → ')} (${route.totalPassengers} passengers)`);
             });
+
+            // After successful merge, if we hit capacity exactly, move to next van size
+            if (totalPassengers === currentMaxCapacity) {
+                if (currentVanIndex < sortedVans.length - 1) {
+                    currentVanIndex++;
+                    currentMaxCapacity = sortedVans[currentVanIndex].seatCount;
+                    console.log(`→ Reached exact capacity (${totalPassengers}), reducing max capacity to: ${currentMaxCapacity}`);
+                }
+            }
         }
 
         // Create dedicated routes for remaining single-location routes
