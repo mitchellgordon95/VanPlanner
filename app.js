@@ -246,6 +246,7 @@ function renderLocations() {
                 
                 input.dataset.selected = 'true';
                 updateLocationName(locationId, place.formatted_address);
+                updateCalculateButton();
             }
         });
     });
