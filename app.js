@@ -341,223 +341,28 @@ async function calculateRoutes() {
     document.querySelector('.loading-overlay').style.display = 'flex';
     
     try {
-        // Find max van capacity
-        const maxVanCapacity = Math.max(...vans.map(van => van.seatCount));
-        
-        // Split locations that exceed max capacity
-        const processedLocations = splitOverflowLocations(locations, maxVanCapacity);
-        
         console.log('\n=== Starting Route Calculation ===');
         console.log('Initial state:', 
             '\nDepot:', depot,
             '\nVans:', vans,
-            '\nProcessed Locations:', processedLocations);
+            '\nLocations:', locations);
 
-        // Validation
-    const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
-    if (unselectedLocations.length > 0) {
-        console.log('Validation failed: Unselected locations found');
-        alert('Error: Some addresses are not properly selected from the dropdown. Please select a complete address for each location.');
-        return;
-    }
-
-    console.log('\n--- Calculating Savings Matrix ---');
-    const savingsList = [];
-    for (let i = 0; i < processedLocations.length; i++) {
-        for (let j = i + 1; j < processedLocations.length; j++) {
-            // Skip if these are split parts of the same original location
-            if (processedLocations[i].originalLocation && 
-                processedLocations[j].originalLocation && 
-                processedLocations[i].name === processedLocations[j].name) {
-                console.log(`Skipping savings calculation between split locations: ${processedLocations[i].id} and ${processedLocations[j].id}`);
-                continue;
-            }
-            
-            const savings = await calculateSavings(processedLocations[i], processedLocations[j]);
-            if (savings !== null) {
-                savingsList.push({
-                    location1: processedLocations[i],
-                    location2: processedLocations[j],
-                    savings: savings,
-                    location1Id: processedLocations[i].id,
-                    location2Id: processedLocations[j].id
-                });
-            }
-        }
-    }
-
-    savingsList.sort((a, b) => b.savings - a.savings);
-    console.log('\nSorted savings list:', savingsList.map(s => ({
-        location1: `${s.location1.name} ${s.location1.splitInfo || ''}`,
-        location2: `${s.location2.name} ${s.location2.splitInfo || ''}`,
-        savings: s.savings
-    })));
-
-    console.log('\n--- Initializing Routes ---');
-    let routes = processedLocations.map(location => ({
-        locations: [location],
-        totalPassengers: location.passengerCount,
-        vanAssigned: false
-    }));
-    console.log('Initial routes:', routes);
-
-    console.log('\n--- Merging Routes Based on Savings ---');
-    for (const saving of savingsList) {
-        console.log(`\nProcessing saving pair:
-            Location 1: ${saving.location1.name} ${saving.location1.splitInfo || ''}
-            Location 2: ${saving.location2.name} ${saving.location2.splitInfo || ''}
-            Potential saving: ${saving.savings} minutes`);
-
-        const route1 = routes.find(r => 
-            r.locations.some(loc => loc.id === saving.location1Id)
-        );
-        const route2 = routes.find(r => 
-            r.locations.some(loc => loc.id === saving.location2Id)
-        );
-
-        if (route1.vanAssigned || route2.vanAssigned) {
-            console.log('Skip: One or both routes already assigned to a van');
-            continue;
+        // Validate inputs
+        const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
+        if (unselectedLocations.length > 0) {
+            console.log('Validation failed: Unselected locations found');
+            alert('Error: Some addresses are not properly selected from the dropdown. Please select a complete address for each location.');
+            return;
         }
 
-        if (route1 === route2) {
-            console.log('Skip: Locations already in same route');
-            continue;
-        }
+        // TODO: Implement routing algorithm
+        const results = [];  // Mock empty results for now
 
-        const totalPassengers = route1.totalPassengers + route2.totalPassengers;
-        console.log(`Combined passengers: ${totalPassengers}`);
-
-        const suitableVans = vans
-            .filter(van => 
-                van.seatCount >= totalPassengers && 
-                !routes.some(r => r.vanAssigned && r.assignedVan === van)
-            )
-            .sort((a, b) => a.seatCount - b.seatCount); // Sort by seat count ascending
-
-        const suitableVan = suitableVans[0]; // Take the smallest suitable van
-
-        if (suitableVan) {
-            console.log(`Found smallest suitable van: Van ${suitableVan.vanNumber} (${suitableVan.seatCount} seats) for ${totalPassengers} passengers`);
-            
-            const mergedLocations = [...route1.locations, ...route2.locations];
-            const estimatedMinutes = await getRouteTime(mergedLocations);
-            
-            console.log(`Merged route details:
-                Locations: ${mergedLocations.map(l => `${l.name} ${l.splitInfo || ''}`).join(' → ')}
-                Total time: ${estimatedMinutes} minutes`);
-
-            const mergedRoute = {
-                locations: mergedLocations,
-                totalPassengers: totalPassengers,
-                vanAssigned: true,
-                assignedVan: suitableVan,
-                estimatedMinutes: estimatedMinutes
-            };
-
-            routes = routes.filter(r => r !== route1 && r !== route2);
-            routes.push(mergedRoute);
-            console.log('Routes after merge:', routes);
-        } else {
-            console.log('No suitable van found for merge');
-        }
-    }
-
-    console.log('\n--- Assigning Remaining Primary Routes ---');
-    routes = await Promise.all(routes.map(async route => {
-        if (!route.vanAssigned) {
-            console.log(`\nProcessing unassigned route: ${route.locations[0].name} ${route.locations[0].splitInfo || ''}`);
-            // Find available vans with sufficient capacity
-            const suitableVans = vans
-                .filter(van => 
-                    van.seatCount >= route.totalPassengers && 
-                    !routes.some(r => r.vanAssigned && r.assignedVan === van)
-                )
-                .sort((a, b) => a.seatCount - b.seatCount); // Sort by seat count ascending
-            
-            if (suitableVans.length > 0) {
-                const bestVan = suitableVans[0]; // Take smallest suitable van
-                console.log(`Assigned to Van ${bestVan.vanNumber} (${bestVan.seatCount} seats) as primary trip`);
-                const estimatedMinutes = await getRouteTime(route.locations);
-                
-                return {
-                    ...route,
-                    vanAssigned: true,
-                    assignedVan: bestVan,
-                    estimatedMinutes,
-                    isSecondTrip: false
-                };
-            } else {
-                console.log('No suitable van available for primary assignment');
-            }
-        }
-        return route;
-    }));
-
-    console.log('\n--- Processing Remaining Single-Location Routes ---');
-    routes = await Promise.all(routes.map(async route => {
-        if (!route.vanAssigned) {
-            console.log(`\nProcessing unassigned route: ${route.locations[0].name} ${route.locations[0].splitInfo || ''}`);
-            // Find van with sufficient seats and shortest current route
-            const suitableVans = vans.filter(van => van.seatCount >= route.totalPassengers);
-        
-            if (suitableVans.length > 0) {
-                // Find which van has the shortest current route
-                let shortestTime = Infinity;
-                let bestVan = null;
-            
-                for (const van of suitableVans) {
-                    const currentRoute = routes.find(r => r.vanAssigned && r.assignedVan === van);
-                    const routeTime = currentRoute ? currentRoute.estimatedMinutes : 0;
-                    if (routeTime < shortestTime) {
-                        shortestTime = routeTime;
-                        bestVan = van;
-                    }
-                }
-            
-                console.log(`Assigned to Van ${bestVan.vanNumber} as second trip`);
-                const estimatedMinutes = await getRouteTime(route.locations);
-                
-                // Create new route object instead of mutating
-                return {
-                    ...route,
-                    vanAssigned: true,
-                    assignedVan: bestVan,
-                    estimatedMinutes,
-                    isSecondTrip: true
-                };
-            }
-        }
-        return route;
-    }));
-
-    console.log('\n--- Final Routes ---');
-    const results = routes
-        .filter(route => route.vanAssigned)
-        .map(route => ({
-            vanNumber: route.assignedVan.vanNumber,
-            seatCount: route.assignedVan.seatCount,
-            locations: route.locations,
-            totalPassengers: route.totalPassengers,
-            estimatedMinutes: route.estimatedMinutes
-        }));
-    console.log('Results:', results);
-
-    const unassignedLocations = routes
-        .filter(route => !route.vanAssigned)
-        .flatMap(route => route.locations);
-
-    if (unassignedLocations.length > 0) {
-        console.log('Warning: Unassigned locations:', unassignedLocations);
-        alert('Warning: Not all locations could be assigned to routes. Need more vans or seats.');
-    }
-
-    displayRoutes(results);
+        displayRoutes(results);
     } catch (error) {
         console.error('Error calculating routes:', error);
         alert('An error occurred while calculating routes. Please try again.');
     } finally {
-        // Hide loading overlay
         document.querySelector('.loading-overlay').style.display = 'none';
     }
 }
