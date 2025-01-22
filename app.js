@@ -434,7 +434,15 @@ async function calculateRoutes() {
 
         // Process savings list
         console.log('\nProcessing savings list...');
+        console.log(`Target number of routes: ${vans.length}`);
+
         for (const saving of savingsList) {
+            // Check if we've hit our target number of routes
+            if (routes.length <= vans.length) {
+                console.log(`\n→ Stopping early: We have ${routes.length} routes for ${vans.length} vans - no need to merge further`);
+                break;
+            }
+
             const { location1, location2, savings } = saving;
             console.log(`\nConsidering merge between:
     Location 1: ${location1.name} ${location1.splitInfo || ''} (${location1.passengerCount} passengers)
