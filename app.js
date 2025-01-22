@@ -468,14 +468,16 @@ async function calculateRoutes() {
         if (!route.vanAssigned) {
             console.log(`\nProcessing unassigned route: ${route.locations[0].name} ${route.locations[0].splitInfo || ''}`);
             // Find available vans with sufficient capacity
-            const suitableVans = vans.filter(van => 
-                van.seatCount >= route.totalPassengers && 
-                !routes.some(r => r.vanAssigned && r.assignedVan === van)
-            );
+            const suitableVans = vans
+                .filter(van => 
+                    van.seatCount >= route.totalPassengers && 
+                    !routes.some(r => r.vanAssigned && r.assignedVan === van)
+                )
+                .sort((a, b) => a.seatCount - b.seatCount); // Sort by seat count ascending
             
             if (suitableVans.length > 0) {
-                const bestVan = suitableVans[0]; // Take first available suitable van
-                console.log(`Assigned to Van ${bestVan.vanNumber} as primary trip`);
+                const bestVan = suitableVans[0]; // Take smallest suitable van
+                console.log(`Assigned to Van ${bestVan.vanNumber} (${bestVan.seatCount} seats) as primary trip`);
                 const estimatedMinutes = await getRouteTime(route.locations);
                 
                 return {
