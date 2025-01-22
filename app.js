@@ -534,19 +534,23 @@ async function calculateRoutes() {
 
         // Create dedicated routes for remaining single-location routes
         const finalRoutes = [];
+        const availableVans = [...sortedVans];  // Make a copy to track which vans are available
+
         for (const route of routes) {
             // Find smallest van that can handle this route
-            const suitableVan = sortedVans.find(van => van.seatCount >= route.totalPassengers);
+            const suitableVan = availableVans.find(van => van.seatCount >= route.totalPassengers);
             
             if (suitableVan) {
                 const routeTime = await getRouteTime(route.locations);
                 finalRoutes.push({
                     locations: route.locations,
                     totalPassengers: route.totalPassengers,
-                    vanNumber: suitableVan.vanNumber,
+                    vanNumber: availableVans.indexOf(suitableVan) + 1,  // Assign van numbers sequentially
                     seatCount: suitableVan.seatCount,
                     estimatedMinutes: routeTime
                 });
+                // Remove this van from available vans
+                availableVans.splice(availableVans.indexOf(suitableVan), 1);
             } else {
                 console.error('Could not find suitable van for route:', route);
             }
