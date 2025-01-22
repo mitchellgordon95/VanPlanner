@@ -201,6 +201,7 @@ function renderVans() {
 }
 
 function renderLocations() {
+    console.log('Rendering locations:', locations);
     const locationList = document.getElementById('location-list');
     locationList.innerHTML = locations.map(location => `
         <div class="location-item">
@@ -209,7 +210,7 @@ function renderLocations() {
                    placeholder="Enter address" 
                    value="${location.name}"
                    data-location-id="${location.id}"
-                   data-selected="false">
+                   data-selected="${location.name ? 'true' : 'false'}">
             <input type="number" 
                    min="1" 
                    value="${location.passengerCount}"
