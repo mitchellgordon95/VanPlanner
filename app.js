@@ -428,13 +428,17 @@ async function calculateRoutes() {
         const totalPassengers = route1.totalPassengers + route2.totalPassengers;
         console.log(`Combined passengers: ${totalPassengers}`);
 
-        const suitableVan = vans.find(van => 
-            van.seatCount >= totalPassengers && 
-            !routes.some(r => r.vanAssigned && r.assignedVan === van)
-        );
+        const suitableVans = vans
+            .filter(van => 
+                van.seatCount >= totalPassengers && 
+                !routes.some(r => r.vanAssigned && r.assignedVan === van)
+            )
+            .sort((a, b) => a.seatCount - b.seatCount); // Sort by seat count ascending
+
+        const suitableVan = suitableVans[0]; // Take the smallest suitable van
 
         if (suitableVan) {
-            console.log(`Found suitable van: Van ${suitableVan.vanNumber} (${suitableVan.seatCount} seats)`);
+            console.log(`Found smallest suitable van: Van ${suitableVan.vanNumber} (${suitableVan.seatCount} seats) for ${totalPassengers} passengers`);
             
             const mergedLocations = [...route1.locations, ...route2.locations];
             const estimatedMinutes = await getRouteTime(mergedLocations);
