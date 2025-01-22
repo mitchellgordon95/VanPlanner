@@ -332,10 +332,23 @@ function updateCalculateButton() {
     const allLocationsSelected = Array.from(locationInputs).every(input => input.dataset.selected === 'true');
     const depotSelected = depotInput.dataset.selected === 'true';
     
+    console.log('Calculate button status check:', {
+        vansCount: vans.length,
+        locationsCount: locations.length,
+        depotSelected: depotSelected,
+        allLocationsSelected: allLocationsSelected,
+        locationStatuses: Array.from(locationInputs).map(input => ({
+            value: input.value,
+            selected: input.dataset.selected
+        }))
+    });
+    
     button.disabled = vans.length === 0 || 
                      locations.length === 0 || 
                      !depotSelected ||
                      !allLocationsSelected;
+                     
+    console.log('Button disabled:', button.disabled);
 }
 
 async function calculateRoutes() {
