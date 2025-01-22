@@ -538,21 +538,39 @@ async function calculateRoutes() {
 
         for (const route of routes) {
             // Find smallest van that can handle this route
-            const suitableVan = availableVans.find(van => van.seatCount >= route.totalPassengers);
+            let suitableVan = availableVans.find(van => van.seatCount >= route.totalPassengers);
             
             if (suitableVan) {
                 const routeTime = await getRouteTime(route.locations);
                 finalRoutes.push({
                     locations: route.locations,
                     totalPassengers: route.totalPassengers,
-                    vanNumber: suitableVan.vanNumber,  // Use the van's actual number
+                    vanNumber: suitableVan.vanNumber,
                     seatCount: suitableVan.seatCount,
-                    estimatedMinutes: routeTime
+                    estimatedMinutes: routeTime,
+                    isSecondTrip: false
                 });
                 // Remove this van from available vans
                 availableVans.splice(availableVans.indexOf(suitableVan), 1);
             } else {
-                console.error('Could not find suitable van for route:', route);
+                // No available vans - look for a van that can do a second trip
+                suitableVan = sortedVans.find(van => van.seatCount >= route.totalPassengers);
+                
+                if (suitableVan) {
+                    const routeTime = await getRouteTime(route.locations);
+                    finalRoutes.push({
+                        locations: route.locations,
+                        totalPassengers: route.totalPassengers,
+                        vanNumber: suitableVan.vanNumber,
+                        seatCount: suitableVan.seatCount,
+                        estimatedMinutes: routeTime,
+                        isSecondTrip: true
+                    });
+                    console.log(`Assigned second trip to van ${suitableVan.vanNumber} for route:`, 
+                        route.locations.map(l => l.name).join(' → '));
+                } else {
+                    console.error('Could not find any suitable van for route:', route);
+                }
             }
         }
 
