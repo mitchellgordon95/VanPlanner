@@ -459,6 +459,35 @@ async function calculateRoutes() {
         }
     }
 
+    console.log('\n--- Assigning Remaining Primary Routes ---');
+    routes = await Promise.all(routes.map(async route => {
+        if (!route.vanAssigned) {
+            console.log(`\nProcessing unassigned route: ${route.locations[0].name} ${route.locations[0].splitInfo || ''}`);
+            // Find available vans with sufficient capacity
+            const suitableVans = vans.filter(van => 
+                van.seatCount >= route.totalPassengers && 
+                !routes.some(r => r.vanAssigned && r.assignedVan === van)
+            );
+            
+            if (suitableVans.length > 0) {
+                const bestVan = suitableVans[0]; // Take first available suitable van
+                console.log(`Assigned to Van ${bestVan.vanNumber} as primary trip`);
+                const estimatedMinutes = await getRouteTime(route.locations);
+                
+                return {
+                    ...route,
+                    vanAssigned: true,
+                    assignedVan: bestVan,
+                    estimatedMinutes,
+                    isSecondTrip: false
+                };
+            } else {
+                console.log('No suitable van available for primary assignment');
+            }
+        }
+        return route;
+    }));
+
     console.log('\n--- Processing Remaining Single-Location Routes ---');
     routes = await Promise.all(routes.map(async route => {
         if (!route.vanAssigned) {
