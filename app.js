@@ -433,8 +433,13 @@ async function calculateRoutes() {
         console.log('Initial routes:', routes);
 
         // Process savings list
+        console.log('\nProcessing savings list...');
         for (const saving of savingsList) {
-            const { location1, location2 } = saving;
+            const { location1, location2, savings } = saving;
+            console.log(`\nConsidering merge between:
+    Location 1: ${location1.name} ${location1.splitInfo || ''} (${location1.passengerCount} passengers)
+    Location 2: ${location2.name} ${location2.splitInfo || ''} (${location2.passengerCount} passengers)
+    Savings: ${savings} minutes`);
             
             // Find routes containing these locations
             const route1 = routes.find(r => r.locations.includes(location1));
@@ -442,7 +447,7 @@ async function calculateRoutes() {
             
             // Skip if locations are already in the same route
             if (route1 === route2) {
-                console.log('Locations already in same route, skipping');
+                console.log('→ Skipping: Locations already in same route');
                 continue;
             }
             
@@ -453,22 +458,29 @@ async function calculateRoutes() {
                                  route2.locations.indexOf(location2) !== route2.locations.length - 1;
             
             if (isLoc1Interior || isLoc2Interior) {
-                console.log('One or both locations are interior nodes, skipping');
+                console.log('→ Skipping: One or both locations are interior nodes');
+                if (isLoc1Interior) console.log(`   ${location1.name} is interior`);
+                if (isLoc2Interior) console.log(`   ${location2.name} is interior`);
                 continue;
             }
             
             // Check combined passenger count
             const totalPassengers = route1.totalPassengers + route2.totalPassengers;
             if (totalPassengers > currentMaxCapacity) {
+                console.log(`→ Skipping: Combined passengers (${totalPassengers}) exceeds current capacity (${currentMaxCapacity})`);
                 // If we hit capacity limit, move to next van size
                 if (currentVanIndex < sortedVans.length - 1) {
                     currentVanIndex++;
                     currentMaxCapacity = sortedVans[currentVanIndex].seatCount;
-                    console.log('Reducing max capacity to:', currentMaxCapacity);
+                    console.log(`   Reducing max capacity to: ${currentMaxCapacity}`);
                 }
-                console.log('Combined passengers exceed current capacity, skipping');
                 continue;
             }
+            
+            // Log current routes before merge
+            console.log('\nBefore merge:');
+            console.log('Route 1:', route1.locations.map(l => l.name).join(' → '));
+            console.log('Route 2:', route2.locations.map(l => l.name).join(' → '));
             
             // Merge the routes
             let mergedLocations;
@@ -495,7 +507,12 @@ async function calculateRoutes() {
             routes = routes.filter(r => r !== route1 && r !== route2);
             routes.push(mergedRoute);
             
-            console.log(`Merged routes, new route has ${mergedLocations.length} locations and ${totalPassengers} passengers`);
+            console.log('\nAfter merge:');
+            console.log('New route:', mergedRoute.locations.map(l => l.name).join(' → '));
+            console.log('\nCurrent routes:');
+            routes.forEach((route, i) => {
+                console.log(`Route ${i + 1}: ${route.locations.map(l => l.name).join(' → ')} (${route.totalPassengers} passengers)`);
+            });
         }
 
         // Create dedicated routes for remaining single-location routes
