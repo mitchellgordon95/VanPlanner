@@ -442,6 +442,14 @@ async function calculateRoutes() {
 
         console.log(`Initial max capacity: ${currentMaxCapacity}`);
 
+        // Initialize routes - one location per route
+        let routes = processedLocations.map(location => ({
+            locations: [location],
+            totalPassengers: location.passengerCount
+        }));
+
+        console.log('Initial routes:', routes);
+
         // Check for routes that are already at max capacity
         routes.forEach((route, index) => {
             console.log(`Checking route ${index + 1}: ${route.totalPassengers} passengers against max capacity ${currentMaxCapacity}`);
@@ -454,14 +462,6 @@ async function calculateRoutes() {
                 }
             }
         });
-
-        // Initialize routes - one location per route
-        let routes = processedLocations.map(location => ({
-            locations: [location],
-            totalPassengers: location.passengerCount
-        }));
-
-        console.log('Initial routes:', routes);
 
         // Process savings list
         console.log('\nProcessing savings list...');
