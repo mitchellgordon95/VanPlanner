@@ -201,7 +201,7 @@ function renderVans() {
 }
 
 function renderLocations() {
-    console.log('Rendering locations:', locations);
+    console.log('Rendering locations:', structuredClone(locations));
     const locationList = document.getElementById('location-list');
     locationList.innerHTML = locations.map(location => `
         <div class="location-item">
@@ -359,9 +359,9 @@ async function calculateRoutes() {
     try {
         console.log('\n=== Starting Route Calculation ===');
         console.log('Initial state:', 
-            '\nDepot:', depot,
-            '\nVans:', vans,
-            '\nLocations:', locations);
+            '\nDepot:', structuredClone(depot),
+            '\nVans:', structuredClone(vans),
+            '\nLocations:', structuredClone(locations));
 
         // Validate inputs
         const unselectedLocations = document.querySelectorAll('.location-input[data-selected="false"]');
@@ -401,7 +401,7 @@ async function calculateRoutes() {
             return splits;
         });
 
-        console.log('Processed locations after splitting:', processedLocations);
+        console.log('Processed locations after splitting:', structuredClone(processedLocations));
 
         // Calculate savings between each pair of locations
         const savingsList = [];
@@ -433,7 +433,7 @@ async function calculateRoutes() {
         // Sort savings by highest first
         savingsList.sort((a, b) => b.savings - a.savings);
 
-        console.log('Calculated savings:', savingsList);
+        console.log('Calculated savings:', structuredClone(savingsList));
 
         // Sort vans by capacity descending
         const sortedVans = [...vans].sort((a, b) => b.seatCount - a.seatCount);
@@ -448,7 +448,7 @@ async function calculateRoutes() {
             totalPassengers: location.passengerCount
         }));
 
-        console.log('Initial routes:', routes);
+        console.log('Initial routes:', structuredClone(routes));
 
         // Check for routes that are already at max capacity
         routes.forEach((route, index) => {
@@ -607,7 +607,7 @@ async function calculateRoutes() {
             }
         }
 
-        console.log('Final routes:', finalRoutes);
+        console.log('Final routes:', structuredClone(finalRoutes));
         displayRoutes(finalRoutes);
     } catch (error) {
         console.error('Error calculating routes:', error);
@@ -641,7 +641,7 @@ GoogleMapsService.init();
 loadState();
 
 function displayRoutes(routes) {
-    console.log('displayRoutes called with:', routes);
+    console.log('displayRoutes called with:', structuredClone(routes));
     
     let resultsSection = document.getElementById('results-section');
     if (!resultsSection) {
@@ -660,7 +660,7 @@ function displayRoutes(routes) {
         vanRoutes[vanNumber].push(route);
     });
 
-    console.log('Grouped vanRoutes:', vanRoutes);
+    console.log('Grouped vanRoutes:', structuredClone(vanRoutes));
 
     resultsSection.innerHTML = `
         <h2>Calculated Routes</h2>
