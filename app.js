@@ -577,9 +577,18 @@ async function calculateRoutes() {
             const suitableVans = sortedVans.filter(van => van.seatCount >= route.totalPassengers);
             
             if (suitableVans.length > 0) {
-                // Sort by number of routes assigned (ascending)
-                suitableVans.sort((a, b) => vanRouteCount[a.vanNumber] - vanRouteCount[b.vanNumber]);
-                const suitableVan = suitableVans[0]; // Pick van with fewest routes
+                // Sort first by number of routes assigned, then by capacity (ascending)
+                suitableVans.sort((a, b) => {
+                    // First compare by route count
+                    const routeCountDiff = vanRouteCount[a.vanNumber] - vanRouteCount[b.vanNumber];
+                    if (routeCountDiff !== 0) {
+                        return routeCountDiff;
+                    }
+                    // If route counts are equal, sort by capacity (smallest first)
+                    return a.seatCount - b.seatCount;
+                });
+        
+                const suitableVan = suitableVans[0]; // Pick van with fewest routes and smallest suitable capacity
                 
                 const routeTime = await getRouteTime(route.locations);
                 finalRoutes.push({
